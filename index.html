@@ -1,282 +1,491 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
-<link rel="manifest" href="manifest.json">
-<title>至急配薬ログ</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="manifest" href="manifest.json" />
+  <title>至急配薬ログ</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+      margin: 0; background:#f6f7f8; color:#111; }
+    header { background:#fff; padding:14px 16px; display:flex; justify-content:space-between; align-items:center;
+      border-bottom:1px solid #e6e6e6; position:sticky; top:0; z-index:10; }
+    .wrap { padding:16px; max-width:560px; margin:0 auto; }
+    .card { background:#fff; border:1px solid #e6e6e6; border-radius:14px; padding:14px; margin-bottom:12px; }
+    .row { display:flex; gap:10px; }
+    .row > div { flex:1; }
+    label { display:block; font-size:12px; color:#555; margin-bottom:6px; }
+    input, select, textarea { width:100%; padding:10px 12px; font-size:16px; border:1px solid #d9d9d9; border-radius:10px; background:#fff; box-sizing:border-box; }
+    textarea { min-height:64px; resize:vertical; }
+    .btnrow { display:flex; gap:10px; }
+    button { width:100%; padding:14px 12px; font-size:16px; border-radius:12px; border:1px solid #d9d9d9; background:#fff; }
+    button.primary { background:#111; color:#fff; border-color:#111; }
+    button:disabled { opacity:.45; }
+    .meta { font-size:14px; color:#333; line-height:1.7; }
+    .status { font-weight:700; }
+    .hint { font-size:12px; color:#777; margin-top:6px; word-break:break-all; }
+    .ok { color:#0a7a2f; }
+    .ng { color:#c01919; }
+    .stop { border:1px solid #ececec; border-radius:12px; padding:12px; margin-top:10px; }
+    .stopHead { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .pill { font-size:12px; color:#555; background:#f0f0f0; padding:4px 8px; border-radius:999px; }
 
-<style>
-body{
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
-  margin:0;background:#f6f7f8;color:#111;
-}
-header{
-  background:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;
-  border-bottom:1px solid #e6e6e6;position:sticky;top:0;z-index:10;
-}
-.wrap{padding:16px;max-width:560px;margin:0 auto;}
-.card{background:#fff;border:1px solid #e6e6e6;border-radius:14px;padding:14px;margin-bottom:12px;}
-.row{display:flex;gap:10px;}
-.row>div{flex:1;}
-label{display:block;font-size:12px;color:#555;margin-bottom:6px;}
-input,select,textarea{
-  width:100%;padding:10px 12px;font-size:16px;border:1px solid #d9d9d9;border-radius:10px;
-}
-textarea{min-height:64px;}
-button{
-  width:100%;padding:14px 12px;font-size:16px;border-radius:12px;
-  border:1px solid #d9d9d9;background:#fff;
-}
-button.primary{background:#111;color:#fff;border-color:#111;}
-button:disabled{opacity:.45;}
-.meta{font-size:14px;line-height:1.7;}
-.status{font-weight:700;}
-.hint{font-size:12px;color:#777;margin-top:6px;word-break:break-all;}
-.ok{color:#0a7a2f;}
-.ng{color:#c01919;}
-.stop{border:1px solid #ececec;border-radius:12px;padding:12px;margin-top:10px;}
-.stopHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.pill{font-size:12px;background:#f0f0f0;padding:4px 8px;border-radius:999px}
-
-/* 設定モーダル */
-.overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.35);
-  display:none;align-items:center;justify-content:center;z-index:999;
-}
-.modal{
-  width:100%;max-width:520px;background:#fff;border-radius:16px;
-  box-shadow:0 12px 28px rgba(0,0,0,.18);
-}
-.modalHead{
-  padding:14px;border-bottom:1px solid #eee;
-  display:flex;justify-content:space-between;align-items:center;font-weight:700;
-}
-.modalBody{padding:14px;}
-</style>
-
-<script>
-function openSettings(){document.getElementById("settingsOverlay").style.display="flex";}
-function closeSettings(){document.getElementById("settingsOverlay").style.display="none";}
-</script>
+    /* 設定モーダル */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display:none;
+      align-items:center; justify-content:center; padding:16px; z-index:999; }
+    .modal { width:100%; max-width:520px; background:#fff; border-radius:16px; border:1px solid #e6e6e6;
+      box-shadow:0 12px 28px rgba(0,0,0,.18); overflow:hidden; }
+    .modalHead { padding:14px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; font-weight:700; }
+    .modalBody { padding:14px; }
+    .smallbtn { width:auto; padding:10px 12px; }
+  </style>
+  <script>
+    function openSettings(){ document.getElementById("settingsOverlay").style.display="flex"; }
+    function closeSettings(){ document.getElementById("settingsOverlay").style.display="none"; }
+  </script>
 </head>
-
 <body>
 <header>
   <div>至急配薬ログ</div>
-  <button style="width:auto" onclick="openSettings()">⚙</button>
+  <button class="smallbtn" onclick="openSettings()">⚙</button>
 </header>
 
 <div class="wrap">
-
-<div class="card">
-  <div class="meta">
-    今日：<span id="today"></span><br>
-    スタッフ：<span id="who">（未設定）</span><br>
-    ステータス：<span class="status" id="status">未開始</span>
+  <div class="card">
+    <div class="meta">
+      今日：<span id="today"></span><br/>
+      店舗：<span id="storeDisp">（未設定）</span><br/>
+      スタッフ：<span id="who">（未設定）</span><br/>
+      ステータス：<span class="status" id="status">未開始</span>
+    </div>
+    <div class="hint" id="facilityLoadStatus"></div>
+    <div class="hint" id="facilityDebug" style="display:none;"></div>
   </div>
-  <div class="hint" id="facilityLoadStatus"></div>
-</div>
 
-<div class="card">
-  <div class="meta">
-    出発：<span id="startTime">--:--</span><br>
-    帰社：<span id="endTime">--:--</span><br>
-    所要：<span id="duration">--</span> 分
+  <div class="card">
+    <div class="meta">
+      出発時刻：<span id="startTime">--:--</span><br/>
+      帰社時刻：<span id="endTime">--:--</span><br/>
+      所要時間：<span id="duration">--</span> 分
+    </div>
+    <div class="btnrow" style="margin-top:12px;">
+      <button class="primary" id="btnStart" type="button">🚑 出発（開始）</button>
+      <button id="btnEnd" type="button" disabled>🏁 帰社（終了）</button>
+    </div>
+    <div class="hint">出発→帰社はワンタップ。施設明細は後から入力OK。</div>
   </div>
-  <div class="row" style="margin-top:10px">
-    <button class="primary" id="btnStart">🚑 出発</button>
-    <button id="btnEnd" disabled>🏁 帰社</button>
+
+  <div class="card">
+    <div class="stopHead">
+      <div class="meta" style="margin:0;">施設明細（最大5件）</div>
+      <div class="pill" id="stopCountPill">0/5</div>
+    </div>
+
+    <datalist id="facilityList"></datalist>
+    <div id="stops"></div>
+
+    <div class="btnrow" style="margin-top:12px;">
+      <button id="btnAddStop" type="button">＋ 施設を追加</button>
+      <button id="btnClearStops" type="button">クリア</button>
+    </div>
+
+    <div class="hint">施設は検索で選択。候補が無ければ手入力もOK（表記ゆれ注意）。</div>
+  </div>
+
+  <div class="card">
+    <label>メモ（任意）</label>
+    <textarea id="memo" placeholder="例：医師追加処方／急変／不足対応／夜間など"></textarea>
+  </div>
+
+  <div class="card">
+    <button class="primary" id="btnSave" disabled type="button">💾 保存（シートへ送信）</button>
+    <div class="hint">保存後に自動でリセットします</div>
+    <div id="result" class="hint"></div>
   </div>
 </div>
 
-<div class="card">
-  <div class="stopHead">
-    <div class="meta">施設明細（最大5）</div>
-    <div class="pill" id="stopCount">0/5</div>
-  </div>
-  <datalist id="facilityList"></datalist>
-  <div id="stops"></div>
-  <div class="row" style="margin-top:10px">
-    <button id="btnAddStop">＋追加</button>
-    <button id="btnClearStops">クリア</button>
-  </div>
-</div>
-
-<div class="card">
-  <label>メモ</label>
-  <textarea id="memo"></textarea>
-</div>
-
-<div class="card">
-  <button class="primary" id="btnSave" disabled>💾 保存</button>
-  <div class="hint" id="result"></div>
-</div>
-
-</div>
-
-<!-- 設定 -->
+<!-- 設定モーダル -->
 <div class="overlay" id="settingsOverlay" onclick="closeSettings()">
-<div class="modal" onclick="event.stopPropagation()">
-<div class="modalHead">
-  <div>設定</div>
-  <button onclick="closeSettings()">閉じる</button>
-</div>
-<div class="modalBody">
-  <label>スタッフ名</label>
-  <input id="staffName">
-  <label style="margin-top:10px">GAS WebアプリURL</label>
-  <input id="endpoint" placeholder="https://script.google.com/macros/s/XXXX/exec">
-  <div class="row" style="margin-top:12px">
-    <button class="primary" id="btnSaveSettings">保存</button>
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modalHead">
+      <div>設定</div>
+      <button class="smallbtn" type="button" onclick="closeSettings()">閉じる</button>
+    </div>
+    <div class="modalBody">
+      <div class="row">
+        <div>
+          <label>店舗</label>
+          <select id="store">
+            <option value="市川店">市川店</option>
+            <option value="千葉店">千葉店</option>
+            <option value="練馬店">練馬店</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <label>スタッフ名（必須）</label>
+        <input id="staffName" placeholder="例：石原" />
+      </div>
+
+      <div style="margin-top:10px;">
+        <label>送信先URL（GAS WebアプリURL）</label>
+        <input id="endpoint" placeholder="https://script.google.com/.../exec" />
+        <div class="hint">※ここには <b>?callback</b> など付けず、<b>/exec</b> までのURLを入れてください（入れても自動で整形します）。</div>
+      </div>
+
+      <div class="btnrow" style="margin-top:12px;">
+        <button id="btnSaveSettings" class="primary" type="button">設定を保存</button>
+        <button type="button" onclick="closeSettings()">キャンセル</button>
+      </div>
+
+      <div class="hint" style="margin-top:10px;">
+        うまく読めない時の確認用：<br/>
+        <label style="margin-top:6px;"><input type="checkbox" id="debugToggle"> デバッグ表示（読込URLを表示）</label>
+      </div>
+    </div>
   </div>
-</div>
-</div>
 </div>
 
 <script>
-const el=id=>document.getElementById(id);
-const pad=n=>String(n).padStart(2,"0");
-const fmtTime=d=>pad(d.getHours())+":"+pad(d.getMinutes());
-const fmtDate=d=>d.getFullYear()+"/"+pad(d.getMonth()+1)+"/"+pad(d.getDate());
-const today=new Date();
-el("today").textContent=fmtDate(today);
-
-let startAt=null,endAt=null,stops=[],facilities=[];
-const MAX=5;
-
-function loadSettings(){
-  return JSON.parse(localStorage.getItem("urgentSettings")||"{}");
-}
-function saveSettings(s){
-  localStorage.setItem("urgentSettings",JSON.stringify(s));
-}
-
-function loadFacilities(){
-  const s=loadSettings();
-  if(!s.endpoint){
-    el("facilityLoadStatus").innerHTML='<span class="ng">⚙でGAS URLを設定してください</span>';
-    return;
+  // --- service worker (optional) ---
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./sw.js").catch(()=>{});
   }
-  const sep=s.endpoint.includes("?")?"&":"?";
-  const cb="cb_"+Math.random().toString(16).slice(2);
-  const url=s.endpoint+sep+"callback="+cb+"&_ts="+Date.now();
-  el("facilityLoadStatus").innerHTML="施設マスタ読込中…<br>"+url;
 
-  window[cb]=list=>{
-    facilities=list||[];
-    el("facilityList").innerHTML="";
-    facilities.forEach(f=>{
-      const o=document.createElement("option");o.value=f;el("facilityList").appendChild(o);
-    });
-    el("facilityLoadStatus").innerHTML='<span class="ok">施設マスタ読み込み：'+facilities.length+'件</span>';
-    delete window[cb];
-  };
+  const pad = n => String(n).padStart(2,"0");
+  const fmtTime = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const fmtDate = d => `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
+  const weekdays = ["日","月","火","水","木","金","土"];
+  const el = id => document.getElementById(id);
 
-  const sc=document.createElement("script");
-  sc.src=url;
-  sc.onerror=()=>{
-    el("facilityLoadStatus").innerHTML='<span class="ng">施設マスタ読込失敗</span><br>'+url;
-    delete window[cb];
-  };
-  document.body.appendChild(sc);
-}
+  // --- state ---
+  let startAt = null;
+  let endAt = null;
+  let facilities = [];
+  let stops = [];
+  const MAX_STOPS = 5;
 
-function renderStops(){
-  el("stops").innerHTML="";
-  stops.forEach((s,i)=>{
-    const d=document.createElement("div");d.className="stop";
-    d.innerHTML=`
-      <label>施設</label>
-      <input list="facilityList" value="${s.facility||""}" data-i="${i}" data-f="facility">
-      <div class="row" style="margin-top:8px">
-        <div><label>件数</label><input type="number" value="${s.cases||1}" data-i="${i}" data-f="cases"></div>
-        <div><label>現地セット</label>
-          <select data-i="${i}" data-f="set">
-            <option value="">未</option>
-            <option value="あり"${s.set==="あり"?" selected":""}>あり</option>
-            <option value="なし"${s.set==="なし"?" selected":""}>なし</option>
-          </select>
+  // --- DOM ---
+  const todayEl = el("today");
+  const whoEl = el("who");
+  const storeDispEl = el("storeDisp");
+  const statusEl = el("status");
+  const facilityLoadStatusEl = el("facilityLoadStatus");
+  const facilityDebugEl = el("facilityDebug");
+
+  const startTimeEl = el("startTime");
+  const endTimeEl = el("endTime");
+  const durationEl = el("duration");
+
+  const btnStart = el("btnStart");
+  const btnEnd = el("btnEnd");
+  const btnSave = el("btnSave");
+  const resultEl = el("result");
+
+  const stopsEl = el("stops");
+  const btnAddStop = el("btnAddStop");
+  const btnClearStops = el("btnClearStops");
+  const stopCountPill = el("stopCountPill");
+
+  const facilityListEl = el("facilityList");
+  const memoEl = el("memo");
+
+  const storeEl = el("store");
+  const staffNameEl = el("staffName");
+  const endpointEl = el("endpoint");
+  const btnSaveSettings = el("btnSaveSettings");
+  const debugToggleEl = el("debugToggle");
+
+  // init date
+  const now = new Date();
+  todayEl.textContent = `${fmtDate(now)} (${weekdays[now.getDay()]})`;
+
+  // settings store
+  function getSettings() {
+    return JSON.parse(localStorage.getItem("urgentDeliverySettings") || "{}");
+  }
+  function setSettings(s) {
+    localStorage.setItem("urgentDeliverySettings", JSON.stringify(s));
+  }
+
+  function normalizeEndpoint(url) {
+    // ? 以降を落として /exec までにする（callback付きを保存されても正常化）
+    const trimmed = (url || "").trim();
+    if (!trimmed) return "";
+    const base = trimmed.split("?")[0];
+    return base;
+  }
+
+  function updateHeader() {
+    const s = getSettings();
+    whoEl.textContent = s.staffName ? s.staffName : "（未設定）";
+    storeDispEl.textContent = s.store ? s.store : "（未設定）";
+  }
+
+  function setStatus(text) { statusEl.textContent = text; }
+
+  function updateTimes() {
+    startTimeEl.textContent = startAt ? fmtTime(startAt) : "--:--";
+    endTimeEl.textContent = endAt ? fmtTime(endAt) : "--:--";
+    durationEl.textContent = (startAt && endAt) ? String(Math.max(0, Math.round((endAt-startAt)/60000))) : "--";
+  }
+
+  function canSave() {
+    const s = getSettings();
+    if (!s.staffName || !s.endpoint || !s.store) return false;
+    if (!(startAt && endAt)) return false;
+    return stops.some(st => (st.facility || "").trim() !== "");
+  }
+  function updateSaveButton() { btnSave.disabled = !canSave(); }
+
+  function escapeHtml(str) {
+    return (str||"").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  }
+
+  function updateStopCount() {
+    stopCountPill.textContent = `${stops.length}/${MAX_STOPS}`;
+    btnAddStop.disabled = stops.length >= MAX_STOPS;
+  }
+
+  function renderStops() {
+    stopsEl.innerHTML = "";
+    stops.forEach((st, idx) => {
+      const n = idx + 1;
+      const wrap = document.createElement("div");
+      wrap.className = "stop";
+      wrap.innerHTML = `
+        <div class="stopHead">
+          <div class="meta" style="margin:0;">${n}件目</div>
+          <button type="button" data-remove="${idx}" style="width:auto;padding:8px 10px;">削除</button>
         </div>
-      </div>`;
-    el("stops").appendChild(d);
-  });
-  el("stopCount").textContent=stops.length+"/"+MAX;
-  document.querySelectorAll("[data-f]").forEach(x=>{
-    x.oninput=()=>{
-      const i=x.dataset.i,f=x.dataset.f;
-      stops[i][f]=x.value;
-      updateSave();
-    };
-  });
-}
 
-function updateSave(){
-  const s=loadSettings();
-  el("btnSave").disabled=!(s.staffName&&s.endpoint&&startAt&&endAt&&stops.some(x=>x.facility));
-}
+        <label>施設（検索して選択）</label>
+        <input type="text" list="facilityList" placeholder="施設名を入力/選択"
+               data-field="facility" data-idx="${idx}" value="${escapeHtml(st.facility || "")}">
 
-el("btnStart").onclick=()=>{
-  startAt=new Date();endAt=null;
-  el("startTime").textContent=fmtTime(startAt);
-  el("status").textContent="計測中";
-  el("btnStart").disabled=true;
-  el("btnEnd").disabled=false;
-};
+        <div class="row" style="margin-top:10px;">
+          <div>
+            <label>件数</label>
+            <input type="number" min="0" inputmode="numeric" data-field="cases" data-idx="${idx}" value="${st.cases ?? 1}">
+          </div>
+          <div>
+            <label>現地薬剤セット</label>
+            <select data-field="on_site_set" data-idx="${idx}">
+              <option value="" ${st.on_site_set===""?"selected":""}>未選択</option>
+              <option value="あり" ${st.on_site_set==="あり"?"selected":""}>あり</option>
+              <option value="なし" ${st.on_site_set==="なし"?"selected":""}>なし</option>
+            </select>
+          </div>
+        </div>
+      `;
+      stopsEl.appendChild(wrap);
+    });
 
-el("btnEnd").onclick=()=>{
-  endAt=new Date();
-  el("endTime").textContent=fmtTime(endAt);
-  el("duration").textContent=Math.round((endAt-startAt)/60000);
-  el("status").textContent="完了";
-  el("btnEnd").disabled=true;
-  updateSave();
-};
+    stopsEl.querySelectorAll("button[data-remove]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const i = Number(btn.getAttribute("data-remove"));
+        stops.splice(i, 1);
+        renderStops();
+        updateStopCount();
+        updateSaveButton();
+      });
+    });
 
-el("btnAddStop").onclick=()=>{
-  if(stops.length<MAX){stops.push({});renderStops();}
-};
-el("btnClearStops").onclick=()=>{stops=[];renderStops();updateSave();};
-
-el("btnSaveSettings").onclick=()=>{
-  const s={staffName:el("staffName").value.trim(),endpoint:el("endpoint").value.trim()};
-  if(!s.staffName||!s.endpoint){alert("必須項目です");return;}
-  saveSettings(s);
-  el("who").textContent=s.staffName;
-  closeSettings();
-  loadFacilities();
-};
-
-el("btnSave").onclick=async()=>{
-  const s=loadSettings();
-  const payload={
-    date:fmtDate(new Date()),
-    staff:s.staffName,
-    start:startAt.toISOString(),
-    end:endAt.toISOString(),
-    stops:stops
-  };
-  el("result").textContent="送信中…";
-  try{
-    await fetch(s.endpoint,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify(payload)});
-    el("result").innerHTML='<span class="ok">送信完了</span>';
-    startAt=endAt=null;stops=[];renderStops();updateSave();
-    el("btnStart").disabled=false;
-  }catch(e){
-    el("result").innerHTML='<span class="ng">送信失敗</span>';
+    stopsEl.querySelectorAll("[data-field]").forEach(inp => {
+      inp.addEventListener("input", () => {
+        const i = Number(inp.getAttribute("data-idx"));
+        const f = inp.getAttribute("data-field");
+        if (!stops[i]) return;
+        stops[i][f] = (f === "cases") ? Number(inp.value || 0) : inp.value;
+        updateSaveButton();
+      });
+      inp.addEventListener("change", updateSaveButton);
+    });
   }
-};
 
-(function boot(){
-  const s=loadSettings();
-  if(s.staffName) el("who").textContent=s.staffName;
-  if(s.endpoint) el("endpoint").value=s.endpoint;
-  if(s.staffName) el("staffName").value=s.staffName;
-  stops.push({});
-  renderStops();
-  loadFacilities();
-})();
+  function addStop() {
+    if (stops.length >= MAX_STOPS) return;
+    stops.push({ facility:"", cases:1, on_site_set:"" });
+    renderStops(); updateStopCount(); updateSaveButton();
+  }
+  function clearStops() {
+    stops = [];
+    renderStops(); updateStopCount(); updateSaveButton();
+  }
+
+  function buildFacilityDatalist() {
+    facilityListEl.innerHTML = "";
+    facilities.forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      facilityListEl.appendChild(opt);
+    });
+  }
+
+  // JSONP loader (CORS回避)
+  function loadFacilitiesFromGAS() {
+    const s = getSettings();
+    if (!s.endpoint) {
+      facilityLoadStatusEl.innerHTML = `<span class="ng">⚙で送信先URL（GAS）を設定してください</span>`;
+      return;
+    }
+
+    facilityLoadStatusEl.textContent = "施設マスタ読込中…";
+
+    const cbName = "cbFacilities_" + Math.random().toString(16).slice(2);
+    const url = s.endpoint + "?callback=" + encodeURIComponent(cbName) + "&_ts=" + Date.now();
+
+    facilityDebugEl.style.display = debugToggleEl.checked ? "block" : "none";
+    if (debugToggleEl.checked) facilityDebugEl.textContent = url;
+
+    window[cbName] = function(list) {
+      try {
+        facilities = Array.isArray(list) ? list : [];
+        buildFacilityDatalist();
+        facilityLoadStatusEl.innerHTML = facilities.length
+          ? `<span class="ok">施設マスタ読み込み：${facilities.length}件</span>`
+          : `<span class="ng">facility_masterが空です（シート名/内容を確認）</span>`;
+      } finally {
+        delete window[cbName];
+      }
+    };
+
+    const script = document.createElement("script");
+    script.src = url;
+    script.onerror = function() {
+      facilityLoadStatusEl.innerHTML = `<span class="ng">施設マスタ読込失敗</span>`;
+      if (debugToggleEl.checked) {
+        facilityDebugEl.style.display = "block";
+        facilityDebugEl.textContent = url;
+      }
+      delete window[cbName];
+    };
+    document.body.appendChild(script);
+  }
+
+  // buttons
+  btnStart.addEventListener("click", () => {
+    startAt = new Date();
+    endAt = null;
+    btnStart.disabled = true;
+    btnEnd.disabled = false;
+    setStatus("計測中");
+    updateTimes();
+    updateSaveButton();
+    resultEl.textContent = "";
+  });
+
+  btnEnd.addEventListener("click", () => {
+    endAt = new Date();
+    btnEnd.disabled = true;
+    setStatus("完了（保存してください）");
+    updateTimes();
+    updateSaveButton();
+  });
+
+  btnAddStop.addEventListener("click", addStop);
+  btnClearStops.addEventListener("click", clearStops);
+
+  btnSave.addEventListener("click", async () => {
+    const s = getSettings();
+
+    const validStops = stops
+      .map((st, idx) => ({
+        stop_no: idx + 1,
+        facility: (st.facility || "").trim(),
+        cases: Number(st.cases || 0),
+        on_site_set: st.on_site_set || ""
+      }))
+      .filter(st => st.facility !== "")
+      .slice(0, MAX_STOPS);
+
+    const payload = {
+      date: fmtDate(new Date()),
+      weekday: weekdays[new Date().getDay()],
+      store: s.store,
+      staff_name: s.staffName,
+      memo: memoEl.value || "",
+      depart_time: startAt.toISOString(),
+      return_time: endAt.toISOString(),
+      duration_min: Math.max(0, Math.round((endAt - startAt) / 60000)),
+      stops: validStops
+    };
+
+    btnSave.disabled = true;
+    resultEl.textContent = "送信中…";
+
+    try {
+      const res = await fetch(s.endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      const txt = await res.text();
+      if (!res.ok) throw new Error(txt || "送信に失敗");
+
+      resultEl.innerHTML = `<span class="ok">送信完了</span>`;
+      // reset
+      startAt = null; endAt = null;
+      memoEl.value = "";
+      btnStart.disabled = false;
+      btnEnd.disabled = true;
+      setStatus("未開始");
+      updateTimes();
+      stops = [];
+      addStop();
+      updateSaveButton();
+    } catch (e) {
+      resultEl.innerHTML = `<span class="ng">エラー：${String(e.message || e)}</span>`;
+      updateSaveButton();
+    }
+  });
+
+  btnSaveSettings.addEventListener("click", () => {
+    const staff = staffNameEl.value.trim();
+    const endpointRaw = endpointEl.value.trim();
+    const endpoint = normalizeEndpoint(endpointRaw);
+    const store = storeEl.value;
+
+    if (!store) { alert("店舗を選んでください"); return; }
+    if (!staff) { alert("スタッフ名は必須です"); return; }
+    if (!endpoint) { alert("送信先URL（GAS）は必須です"); return; }
+
+    setSettings({ store, staffName: staff, endpoint });
+    endpointEl.value = endpoint; // 整形結果を画面にも反映
+
+    updateHeader();
+    closeSettings();
+    loadFacilitiesFromGAS();
+    updateSaveButton();
+  });
+
+  debugToggleEl.addEventListener("change", () => {
+    facilityDebugEl.style.display = debugToggleEl.checked ? "block" : "none";
+    if (!debugToggleEl.checked) facilityDebugEl.textContent = "";
+  });
+
+  // boot
+  (function boot(){
+    const s = getSettings();
+    if (s.store) storeEl.value = s.store;
+    if (s.staffName) staffNameEl.value = s.staffName;
+    if (s.endpoint) endpointEl.value = s.endpoint;
+
+    updateHeader();
+    updateTimes();
+    renderStops();
+    updateStopCount();
+
+    // 初期は1件出す
+    addStop();
+
+    // 施設読込（設定済みなら）
+    if (s.endpoint) loadFacilitiesFromGAS();
+
+    updateSaveButton();
+  })();
 </script>
 </body>
 </html>
