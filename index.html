@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>至急配薬ログ</title>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <h1>至急配薬ログ（テスト）</h1>
+
+  <button onclick="start()">🚑 出発</button>
+  <button onclick="end()">🏁 帰社</button>
+  <button onclick="save()">💾 保存</button>
+
+  <pre id="log"></pre>
+
+<script>
+let startTime = null;
+let endTime = null;
+
+function start() {
+  startTime = new Date();
+  document.getElementById("log").textContent =
+    "出発：" + startTime.toLocaleTimeString();
+}
+
+function end() {
+  endTime = new Date();
+  document.getElementById("log").textContent +=
+    "\n帰社：" + endTime.toLocaleTimeString();
+}
+
+function save() {
+  alert("まずはここまで動けばOK！");
+}
+</script>
+</body>
+</html>
