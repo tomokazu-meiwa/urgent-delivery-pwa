@@ -31,7 +31,6 @@
     .stopHead { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
     .pill { font-size:12px; color:#555; background:#f0f0f0; padding:4px 8px; border-radius:999px; }
 
-    /* 設定モーダル */
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display:none;
       align-items:center; justify-content:center; padding:16px; z-index:999; }
     .modal { width:100%; max-width:520px; background:#fff; border-radius:16px; border:1px solid #e6e6e6;
@@ -59,7 +58,8 @@
       スタッフ：<span id="who">（未設定）</span><br/>
       ステータス：<span class="status" id="status">未開始</span>
     </div>
-    <div class="hint" id="facilityStatus"><span class="ok">施設マスタ：アプリ内蔵</span></div>
+    <div class="hint"><span class="ok">施設マスタ：アプリ内蔵</span></div>
+    <div class="hint" id="authHint" style="display:none;"></div>
   </div>
 
   <div class="card">
@@ -72,7 +72,6 @@
       <button class="primary" id="btnStart" type="button">🚑 出発（開始）</button>
       <button id="btnEnd" type="button" disabled>🏁 帰社（終了）</button>
     </div>
-    <div class="hint">出発→帰社はワンタップ。施設明細は後から入力OK。</div>
   </div>
 
   <div class="card">
@@ -88,8 +87,6 @@
       <button id="btnAddStop" type="button">＋ 施設を追加</button>
       <button id="btnClearStops" type="button">クリア</button>
     </div>
-
-    <div class="hint">施設は検索して選択（候補はアプリ内蔵）。候補が無ければ手入力もOK。</div>
   </div>
 
   <div class="card">
@@ -99,7 +96,7 @@
 
   <div class="card">
     <button class="primary" id="btnSave" disabled type="button">💾 保存（シートへ送信）</button>
-    <div class="hint" id="result"></div>
+    <div id="result" class="hint"></div>
   </div>
 </div>
 
@@ -130,7 +127,7 @@
       <div style="margin-top:10px;">
         <label>送信先URL（GAS WebアプリURL /exec）</label>
         <input id="endpoint" placeholder="https://script.google.com/a/macros/.../exec" />
-        <div class="hint">※ここには /exec までを入力（?callback等は不要）。</div>
+        <div class="hint">※ここには /exec まで（?callback等は不要）</div>
       </div>
 
       <div class="btnrow" style="margin-top:12px;">
@@ -141,88 +138,34 @@
   </div>
 </div>
 
+<!-- ✅ CORS回避：隠しフォーム送信用（iframeターゲット） -->
+<iframe name="sinkFrame" style="display:none;"></iframe>
+<form id="sinkForm" method="POST" target="sinkFrame" style="display:none;">
+  <input type="hidden" name="payload" id="sinkPayload">
+</form>
+
 <script>
-  // PWA（任意）
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
 
-  // ===== 施設マスタ（アプリ内蔵）=====
   const FACILITIES = [
-    "Fすみだ文花",
-    "GH船橋海神",
-    "GH船橋二子",
-    "CO市川中山",
-    "CO本八幡",
-    "GH南流山",
-    "GH流山美原",
-    "GH松戸小金原",
-    "GH白井冨士",
-    "CO幕張ベイタウン",
-    "CO蘇我",
-    "CO原木中山",
-    "GH千葉黒砂台",
-    "GH千葉園生",
-    "GH千葉小倉",
-    "GH習志野奏の杜",
-    "CO松戸五香",
-    "COはさま",
-    "CO八千代緑が丘",
-    "GH松戸上本郷",
-    "GH佐倉西志津",
-    "GH船橋坪井東",
-    "GH八千代高津",
-    "GH江戸川鹿骨",
-    "GH市川国分",
-    "GH南行徳",
-    "GH東松戸",
-    "GH葛飾奥戸",
-    "GH葛飾青戸",
-    "CO西船橋",
-    "CO水元",
-    "CO三郷中央",
-    "GH葛飾西亀有",
-    "GH足立加平",
-    "GH三郷戸ヶ崎",
-    "GH荒川南千住",
-    "花物語えどがわ",
-    "花物語こうとう北",
-    "花物語こうとう南",
-    "花珠の家えどがわ",
-    "AH千葉幕張",
-    "CO八千代台",
-    "CO新小岩",
-    "CO稲毛海岸",
-    "CO船橋前原",
-    "CO船橋三咲",
-    "GH心の花御成",
-    "GH心の花",
-    "GH松戸常盤平",
-    "GH市原五井西",
-    "GH市原国分寺台",
-    "GH市原能満",
-    "GH四街道物井",
-    "チャーム水元公園",
-    "CO松戸六実",
-    "GH佐倉上座",
-    "GH八千代大和田新田",
-    "GH印西木下",
-    "GH西尾久",
-    "GH柏の葉"
+    "Fすみだ文花","GH船橋海神","GH船橋二子","CO市川中山","CO本八幡","GH南流山","GH流山美原","GH松戸小金原","GH白井冨士",
+    "CO幕張ベイタウン","CO蘇我","CO原木中山","GH千葉黒砂台","GH千葉園生","GH千葉小倉","GH習志野奏の杜","CO松戸五香","COはさま",
+    "CO八千代緑が丘","GH松戸上本郷","GH佐倉西志津","GH船橋坪井東","GH八千代高津","GH江戸川鹿骨","GH市川国分","GH南行徳","GH東松戸",
+    "GH葛飾奥戸","GH葛飾青戸","CO西船橋","CO水元","CO三郷中央","GH葛飾西亀有","GH足立加平","GH三郷戸ヶ崎","GH荒川南千住",
+    "花物語えどがわ","花物語こうとう北","花物語こうとう南","花珠の家えどがわ","AH千葉幕張","CO八千代台","CO新小岩","CO稲毛海岸",
+    "CO船橋前原","CO船橋三咲","GH心の花御成","GH心の花","GH松戸常盤平","GH市原五井西","GH市原国分寺台","GH市原能満","GH四街道物井",
+    "チャーム水元公園","CO松戸六実","GH佐倉上座","GH八千代大和田新田","GH印西木下","GH西尾久","GH柏の葉"
   ];
 
-  // ===== util =====
   const pad = n => String(n).padStart(2,"0");
   const fmtTime = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   const fmtDate = d => `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
   const weekdays = ["日","月","火","水","木","金","土"];
   const el = id => document.getElementById(id);
 
-  // ===== state =====
-  let startAt = null;
-  let endAt = null;
-  let stops = [];
+  let startAt = null, endAt = null, stops = [];
   const MAX_STOPS = 5;
 
-  // ===== DOM =====
   const todayEl = el("today");
   const whoEl = el("who");
   const storeDispEl = el("storeDisp");
@@ -244,68 +187,52 @@
   const staffNameEl = el("staffName");
   const endpointEl = el("endpoint");
   const btnSaveSettings = el("btnSaveSettings");
+  const authHintEl = el("authHint");
 
-  // ===== settings =====
-  function getSettings() {
-    return JSON.parse(localStorage.getItem("urgentDeliverySettings") || "{}");
-  }
-  function setSettings(s) {
-    localStorage.setItem("urgentDeliverySettings", JSON.stringify(s));
-  }
-  function normalizeEndpoint(url) {
-    const trimmed = (url || "").trim();
-    if (!trimmed) return "";
-    return trimmed.split("?")[0]; // ?以降は落とす
-  }
-  function updateHeader() {
-    const s = getSettings();
-    whoEl.textContent = s.staffName ? s.staffName : "（未設定）";
-    storeDispEl.textContent = s.store ? s.store : "（未設定）";
-  }
+  function getSettings(){ return JSON.parse(localStorage.getItem("urgentDeliverySettings") || "{}"); }
+  function setSettings(s){ localStorage.setItem("urgentDeliverySettings", JSON.stringify(s)); }
+  function normalizeEndpoint(url){ const t=(url||"").trim(); return t ? t.split("?")[0] : ""; }
 
-  function setStatus(text) { statusEl.textContent = text; }
-
-  function updateTimes() {
+  function updateHeader(){
+    const s=getSettings();
+    whoEl.textContent = s.staffName || "（未設定）";
+    storeDispEl.textContent = s.store || "（未設定）";
+  }
+  function setStatus(t){ statusEl.textContent=t; }
+  function updateTimes(){
     startTimeEl.textContent = startAt ? fmtTime(startAt) : "--:--";
     endTimeEl.textContent = endAt ? fmtTime(endAt) : "--:--";
     durationEl.textContent = (startAt && endAt) ? String(Math.max(0, Math.round((endAt-startAt)/60000))) : "--";
   }
-
-  function canSave() {
-    const s = getSettings();
-    if (!s.store || !s.staffName || !s.endpoint) return false;
-    if (!(startAt && endAt)) return false;
-    return stops.some(st => (st.facility || "").trim() !== "");
+  function canSave(){
+    const s=getSettings();
+    if(!s.store || !s.staffName || !s.endpoint) return false;
+    if(!(startAt && endAt)) return false;
+    return stops.some(st => (st.facility||"").trim() !== "");
   }
-  function updateSaveButton() { btnSave.disabled = !canSave(); }
+  function updateSaveButton(){ btnSave.disabled = !canSave(); }
 
-  function escapeHtml(str) {
-    return (str||"").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
-  }
-
-  // ===== facility datalist (embedded) =====
-  function buildFacilityDatalist() {
-    facilityListEl.innerHTML = "";
-    FACILITIES.forEach(name => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      facilityListEl.appendChild(opt);
-    });
+  function buildFacilityDatalist(){
+    facilityListEl.innerHTML="";
+    FACILITIES.forEach(name=>{ const o=document.createElement("option"); o.value=name; facilityListEl.appendChild(o); });
   }
 
-  // ===== stops =====
-  function updateStopCount() {
+  function updateStopCount(){
     stopCountPill.textContent = `${stops.length}/${MAX_STOPS}`;
     btnAddStop.disabled = stops.length >= MAX_STOPS;
   }
 
-  function renderStops() {
-    stopsEl.innerHTML = "";
-    stops.forEach((st, idx) => {
-      const n = idx + 1;
-      const wrap = document.createElement("div");
-      wrap.className = "stop";
-      wrap.innerHTML = `
+  function escapeHtml(str){
+    return (str||"").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  }
+
+  function renderStops(){
+    stopsEl.innerHTML="";
+    stops.forEach((st,idx)=>{
+      const n=idx+1;
+      const wrap=document.createElement("div");
+      wrap.className="stop";
+      wrap.innerHTML=`
         <div class="stopHead">
           <div class="meta" style="margin:0;">${n}件目</div>
           <button type="button" data-remove="${idx}" style="width:auto;padding:8px 10px;">削除</button>
@@ -333,72 +260,69 @@
       stopsEl.appendChild(wrap);
     });
 
-    stopsEl.querySelectorAll("button[data-remove]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const i = Number(btn.getAttribute("data-remove"));
-        stops.splice(i, 1);
+    stopsEl.querySelectorAll("button[data-remove]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const i=Number(btn.getAttribute("data-remove"));
+        stops.splice(i,1);
         renderStops(); updateStopCount(); updateSaveButton();
       });
     });
 
-    stopsEl.querySelectorAll("[data-field]").forEach(inp => {
-      inp.addEventListener("input", () => {
-        const i = Number(inp.getAttribute("data-idx"));
-        const f = inp.getAttribute("data-field");
-        if (!stops[i]) return;
-        stops[i][f] = (f === "cases") ? Number(inp.value || 0) : inp.value;
+    stopsEl.querySelectorAll("[data-field]").forEach(inp=>{
+      inp.addEventListener("input", ()=>{
+        const i=Number(inp.getAttribute("data-idx"));
+        const f=inp.getAttribute("data-field");
+        if(!stops[i]) return;
+        stops[i][f] = (f==="cases") ? Number(inp.value || 0) : inp.value;
         updateSaveButton();
       });
       inp.addEventListener("change", updateSaveButton);
     });
   }
 
-  function addStop() {
-    if (stops.length >= MAX_STOPS) return;
+  function addStop(){
+    if(stops.length>=MAX_STOPS) return;
     stops.push({ facility:"", cases:1, on_site_set:"" });
     renderStops(); updateStopCount(); updateSaveButton();
   }
+  function clearStops(){ stops=[]; renderStops(); updateStopCount(); updateSaveButton(); }
 
-  function clearStops() {
-    stops = [];
-    renderStops(); updateStopCount(); updateSaveButton();
+  // ✅ CORS回避：フォーム送信（レスポンスは読まない）
+  function postViaForm(endpoint, payloadObj){
+    const form = el("sinkForm");
+    const input = el("sinkPayload");
+    form.action = endpoint;          // GAS /exec
+    input.value = JSON.stringify(payloadObj);
+    form.submit();
   }
 
-  // ===== actions =====
-  btnStart.addEventListener("click", () => {
-    startAt = new Date();
-    endAt = null;
-    btnStart.disabled = true;
-    btnEnd.disabled = false;
+  btnStart.addEventListener("click", ()=>{
+    startAt=new Date(); endAt=null;
+    btnStart.disabled=true; btnEnd.disabled=false;
     setStatus("計測中");
-    updateTimes();
-    updateSaveButton();
-    resultEl.textContent = "";
+    updateTimes(); updateSaveButton();
+    resultEl.textContent="";
   });
 
-  btnEnd.addEventListener("click", () => {
-    endAt = new Date();
-    btnEnd.disabled = true;
+  btnEnd.addEventListener("click", ()=>{
+    endAt=new Date();
+    btnEnd.disabled=true;
     setStatus("完了（保存してください）");
-    updateTimes();
-    updateSaveButton();
+    updateTimes(); updateSaveButton();
   });
 
   btnAddStop.addEventListener("click", addStop);
   btnClearStops.addEventListener("click", clearStops);
 
-  btnSave.addEventListener("click", async () => {
-    const s = getSettings();
+  btnSave.addEventListener("click", ()=>{
+    const s=getSettings();
 
-    const validStops = stops
-      .map((st, idx) => ({
-        stop_no: idx + 1,
-        facility: (st.facility || "").trim(),
-        cases: Number(st.cases || 0),
-        on_site_set: st.on_site_set || ""
-      }))
-      .filter(st => st.facility !== "")
-      .slice(0, MAX_STOPS);
+    const validStops = stops.map((st,idx)=>({
+      stop_no: idx+1,
+      facility: (st.facility||"").trim(),
+      cases: Number(st.cases||0),
+      on_site_set: st.on_site_set || ""
+    })).filter(x=>x.facility!=="").slice(0,MAX_STOPS);
 
     const payload = {
       date: fmtDate(new Date()),
@@ -408,69 +332,56 @@
       memo: memoEl.value || "",
       depart_time: startAt.toISOString(),
       return_time: endAt.toISOString(),
-      duration_min: Math.max(0, Math.round((endAt - startAt) / 60000)),
+      duration_min: Math.max(0, Math.round((endAt-startAt)/60000)),
       stops: validStops
     };
 
-    btnSave.disabled = true;
-    resultEl.textContent = "送信中…";
+    btnSave.disabled=true;
+    resultEl.textContent="送信しました（反映まで数秒かかることがあります）";
 
-    try {
-      const res = await fetch(s.endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(payload)
-      });
+    // ここで送信
+    postViaForm(s.endpoint, payload);
 
-      const txt = await res.text();
-      if (!res.ok) throw new Error(txt || "送信に失敗");
+    // 業務運用上は「送信したらリセット」でOK（レスポンス待たない）
+    startAt=null; endAt=null;
+    memoEl.value="";
+    btnStart.disabled=false;
+    btnEnd.disabled=true;
+    setStatus("未開始");
+    updateTimes();
+    stops=[]; addStop();
+    updateSaveButton();
 
-      resultEl.innerHTML = `<span class="ok">送信完了</span>`;
-
-      // reset
-      startAt = null; endAt = null;
-      memoEl.value = "";
-      btnStart.disabled = false;
-      btnEnd.disabled = true;
-      setStatus("未開始");
-      updateTimes();
-      stops = [];
-      addStop();
-      updateSaveButton();
-    } catch (e) {
-      resultEl.innerHTML = `<span class="ng">エラー：${String(e.message || e)}</span>`;
-      updateSaveButton();
-    }
+    // ドメイン内のみの場合の注意表示
+    authHintEl.style.display="block";
+    authHintEl.innerHTML = `<span class="hint">※送信先が「ドメイン内のみ」の場合、iPhoneがGoogleに未ログインだと反映されません。最初にSafariで一度だけ ${s.endpoint} を開きログインしておくと安定します。</span>`;
   });
 
-  btnSaveSettings.addEventListener("click", () => {
+  btnSaveSettings.addEventListener("click", ()=>{
     const staff = staffNameEl.value.trim();
     const endpoint = normalizeEndpoint(endpointEl.value);
     const store = storeEl.value;
 
-    if (!store) { alert("店舗を選んでください"); return; }
-    if (!staff) { alert("スタッフ名は必須です"); return; }
-    if (!endpoint) { alert("送信先URL（GAS /exec）は必須です"); return; }
+    if(!store){ alert("店舗を選んでください"); return; }
+    if(!staff){ alert("スタッフ名は必須です"); return; }
+    if(!endpoint){ alert("送信先URL（GAS /exec）は必須です"); return; }
 
     setSettings({ store, staffName: staff, endpoint });
     endpointEl.value = endpoint;
-
     updateHeader();
     closeSettings();
     updateSaveButton();
   });
 
-  // ===== boot =====
   (function boot(){
-    const now = new Date();
-    todayEl.textContent = `${fmtDate(now)} (${weekdays[now.getDay()]})`;
-
+    const now=new Date();
+    todayEl.textContent=`${fmtDate(now)} (${weekdays[now.getDay()]})`;
     buildFacilityDatalist();
 
-    const s = getSettings();
-    if (s.store) storeEl.value = s.store;
-    if (s.staffName) staffNameEl.value = s.staffName;
-    if (s.endpoint) endpointEl.value = s.endpoint;
+    const s=getSettings();
+    if(s.store) storeEl.value=s.store;
+    if(s.staffName) staffNameEl.value=s.staffName;
+    if(s.endpoint) endpointEl.value=s.endpoint;
 
     updateHeader();
     updateTimes();
