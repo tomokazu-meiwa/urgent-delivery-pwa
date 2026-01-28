@@ -30,22 +30,55 @@
     .stop { border:1px solid #ececec; border-radius:12px; padding:12px; margin-top:10px; }
     .stopHead { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
     .pill { font-size:12px; color:#555; background:#f0f0f0; padding:4px 8px; border-radius:999px; }
+
+    /* ✅ 設定モーダル */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 999;
+    }
+    .modal {
+      width: 100%;
+      max-width: 520px;
+      background: #fff;
+      border-radius: 16px;
+      border: 1px solid #e6e6e6;
+      box-shadow: 0 12px 28px rgba(0,0,0,.18);
+      overflow: hidden;
+    }
+    .modalHead {
+      padding: 14px 14px;
+      border-bottom: 1px solid #eee;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      font-weight: 700;
+    }
+    .modalBody { padding: 14px; }
+    .modalClose { width:auto; padding:10px 12px; }
   </style>
 
   <script>
-    // ✅ ここが重要：onclickで確実に開くトグル関数（イベント登録不要）
-    function toggleSettings() {
-      const card = document.getElementById("settings");
-      if (!card) return;
-      card.style.display = (card.style.display === "none" || card.style.display === "") ? "block" : "none";
+    function openSettings() {
+      const ov = document.getElementById("settingsOverlay");
+      if (!ov) return;
+      ov.style.display = "flex";
+    }
+    function closeSettings() {
+      const ov = document.getElementById("settingsOverlay");
+      if (!ov) return;
+      ov.style.display = "none";
     }
   </script>
 </head>
 <body>
 <header>
   <div>至急配薬ログ</div>
-  <!-- ✅ onclick直書きで確実に反応 -->
-  <button style="width:auto;padding:10px 12px;" onclick="toggleSettings()">⚙</button>
+  <button style="width:auto;padding:10px 12px;" onclick="openSettings()">⚙</button>
 </header>
 
 <div class="wrap">
@@ -56,7 +89,7 @@
       ステータス：<span class="status" id="status">未開始</span>
     </div>
     <div class="hint" id="facilityLoadStatus"></div>
-    <div class="hint" id="jsAlive" class="ok"></div>
+    <div class="hint" id="jsAlive"></div>
   </div>
 
   <div class="card">
@@ -86,7 +119,7 @@
       <button id="btnClearStops" type="button">クリア</button>
     </div>
 
-    <div class="hint">施設は検索で選べます。候補が無ければそのまま手入力もOK（表記ゆれ注意）。</div>
+    <div class="hint">施設は検索で選べます。候補が無ければ手入力もOK（表記ゆれ注意）。</div>
   </div>
 
   <div class="card">
@@ -99,34 +132,42 @@
     <div class="hint">保存後に自動でリセットします</div>
     <div id="result" class="hint"></div>
   </div>
+</div>
 
-  <!-- ✅ 設定カード（toggleSettingsで開閉） -->
-  <div class="card" id="settings" style="display:none;">
-    <div class="row">
-      <div>
-        <label>店舗</label>
-        <select id="store">
-          <option value="市川店">市川店</option>
-          <option value="千葉店">千葉店</option>
-          <option value="練馬店">練馬店</option>
-        </select>
+<!-- ✅ 設定モーダル（中央表示） -->
+<div class="overlay" id="settingsOverlay" onclick="closeSettings()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modalHead">
+      <div>設定</div>
+      <button class="modalClose" type="button" onclick="closeSettings()">閉じる</button>
+    </div>
+    <div class="modalBody">
+      <div class="row">
+        <div>
+          <label>店舗</label>
+          <select id="store">
+            <option value="市川店">市川店</option>
+            <option value="千葉店">千葉店</option>
+            <option value="練馬店">練馬店</option>
+          </select>
+        </div>
       </div>
-    </div>
 
-    <div style="margin-top:10px;">
-      <label>スタッフ名（必須）</label>
-      <input id="staffName" placeholder="例：石原" />
-    </div>
+      <div style="margin-top:10px;">
+        <label>スタッフ名（必須）</label>
+        <input id="staffName" placeholder="例：石原" />
+      </div>
 
-    <div style="margin-top:10px;">
-      <label>送信先URL（GAS WebアプリURL）</label>
-      <input id="endpoint" placeholder="https://script.google.com/macros/s/....../exec" />
-      <div class="hint">このURLから施設マスタも読み込みます（JSONP）。</div>
-    </div>
+      <div style="margin-top:10px;">
+        <label>送信先URL（GAS WebアプリURL）</label>
+        <input id="endpoint" placeholder="https://script.google.com/macros/s/....../exec" />
+        <div class="hint">このURLから施設マスタも読み込みます（JSONP）。</div>
+      </div>
 
-    <div class="btnrow" style="margin-top:12px;">
-      <button id="btnSaveSettings" class="primary" type="button">設定を保存</button>
-      <button type="button" onclick="toggleSettings()">閉じる</button>
+      <div class="btnrow" style="margin-top:12px;">
+        <button id="btnSaveSettings" class="primary" type="button">設定を保存</button>
+        <button type="button" onclick="closeSettings()">キャンセル</button>
+      </div>
     </div>
   </div>
 </div>
@@ -181,7 +222,7 @@
   const endpointEl = el("endpoint");
   const btnSaveSettings = el("btnSaveSettings");
 
-  // init
+  // init date
   const now = new Date();
   todayEl.textContent = `${fmtDate(now)} (${weekdays[now.getDay()]})`;
   jsAliveEl.innerHTML = `<span class="ok">JS起動OK</span>`;
@@ -258,9 +299,7 @@
       btn.addEventListener("click", () => {
         const i = Number(btn.getAttribute("data-remove"));
         stops.splice(i, 1);
-        renderStops();
-        updateStopCount();
-        updateSaveButton();
+        renderStops(); updateStopCount(); updateSaveButton();
       });
     });
 
@@ -296,7 +335,7 @@
     });
   }
 
-  // JSONP (CORS回避)
+  // JSONP
   function loadFacilitiesFromGAS() {
     const s = getSettings();
     if (!s.endpoint) {
@@ -327,7 +366,7 @@
     document.body.appendChild(script);
   }
 
-  // events
+  // buttons
   btnStart.addEventListener("click", () => {
     startAt = new Date();
     endAt = null;
@@ -360,6 +399,7 @@
       resultEl.innerHTML = `<span class="ng">出発→帰社を押してください</span>`;
       return;
     }
+
     const validStops = stops
       .map((st, idx) => ({
         stop_no: idx + 1,
@@ -396,6 +436,7 @@
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(payload)
       });
+
       const txt = await res.text();
       if (!res.ok) throw new Error(txt || "送信に失敗");
 
@@ -420,10 +461,11 @@
     };
     if (!next.staffName) { alert("スタッフ名は必須です"); return; }
     if (!next.endpoint) { alert("送信先URL（GAS）は必須です"); return; }
+
     setSettings(next);
     updateWho();
     loadFacilitiesFromGAS();
-    toggleSettings(); // 閉じる
+    closeSettings();
     updateSaveButton();
   });
 
@@ -436,7 +478,7 @@
 
     updateWho();
     updateTimes();
-    addStop(); // 初期1件
+    addStop();
     updateStopCount();
     updateSaveButton();
     loadFacilitiesFromGAS();
