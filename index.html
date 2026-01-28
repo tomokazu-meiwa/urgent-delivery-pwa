@@ -59,8 +59,7 @@
       スタッフ：<span id="who">（未設定）</span><br/>
       ステータス：<span class="status" id="status">未開始</span>
     </div>
-    <div class="hint" id="facilityLoadStatus"></div>
-    <div class="hint" id="facilityDebug" style="display:none;"></div>
+    <div class="hint" id="facilityStatus"><span class="ok">施設マスタ：アプリ内蔵</span></div>
   </div>
 
   <div class="card">
@@ -90,7 +89,7 @@
       <button id="btnClearStops" type="button">クリア</button>
     </div>
 
-    <div class="hint">施設は検索で選択。候補が無ければ手入力もOK（表記ゆれ注意）。</div>
+    <div class="hint">施設は検索して選択（候補はアプリ内蔵）。候補が無ければ手入力もOK。</div>
   </div>
 
   <div class="card">
@@ -100,8 +99,7 @@
 
   <div class="card">
     <button class="primary" id="btnSave" disabled type="button">💾 保存（シートへ送信）</button>
-    <div class="hint">保存後に自動でリセットします</div>
-    <div id="result" class="hint"></div>
+    <div class="hint" id="result"></div>
   </div>
 </div>
 
@@ -130,94 +128,135 @@
       </div>
 
       <div style="margin-top:10px;">
-        <label>送信先URL（GAS WebアプリURL）</label>
-        <input id="endpoint" placeholder="https://script.google.com/.../exec" />
-        <div class="hint">※ここには <b>?callback</b> など付けず、<b>/exec</b> までのURLを入れてください（入れても自動で整形します）。</div>
+        <label>送信先URL（GAS WebアプリURL /exec）</label>
+        <input id="endpoint" placeholder="https://script.google.com/a/macros/.../exec" />
+        <div class="hint">※ここには /exec までを入力（?callback等は不要）。</div>
       </div>
 
       <div class="btnrow" style="margin-top:12px;">
         <button id="btnSaveSettings" class="primary" type="button">設定を保存</button>
         <button type="button" onclick="closeSettings()">キャンセル</button>
       </div>
-
-      <div class="hint" style="margin-top:10px;">
-        うまく読めない時の確認用：<br/>
-        <label style="margin-top:6px;"><input type="checkbox" id="debugToggle"> デバッグ表示（読込URLを表示）</label>
-      </div>
     </div>
   </div>
 </div>
 
 <script>
-  // --- service worker (optional) ---
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./sw.js").catch(()=>{});
-  }
+  // PWA（任意）
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
 
+  // ===== 施設マスタ（アプリ内蔵）=====
+  const FACILITIES = [
+    "Fすみだ文花",
+    "GH船橋海神",
+    "GH船橋二子",
+    "CO市川中山",
+    "CO本八幡",
+    "GH南流山",
+    "GH流山美原",
+    "GH松戸小金原",
+    "GH白井冨士",
+    "CO幕張ベイタウン",
+    "CO蘇我",
+    "CO原木中山",
+    "GH千葉黒砂台",
+    "GH千葉園生",
+    "GH千葉小倉",
+    "GH習志野奏の杜",
+    "CO松戸五香",
+    "COはさま",
+    "CO八千代緑が丘",
+    "GH松戸上本郷",
+    "GH佐倉西志津",
+    "GH船橋坪井東",
+    "GH八千代高津",
+    "GH江戸川鹿骨",
+    "GH市川国分",
+    "GH南行徳",
+    "GH東松戸",
+    "GH葛飾奥戸",
+    "GH葛飾青戸",
+    "CO西船橋",
+    "CO水元",
+    "CO三郷中央",
+    "GH葛飾西亀有",
+    "GH足立加平",
+    "GH三郷戸ヶ崎",
+    "GH荒川南千住",
+    "花物語えどがわ",
+    "花物語こうとう北",
+    "花物語こうとう南",
+    "花珠の家えどがわ",
+    "AH千葉幕張",
+    "CO八千代台",
+    "CO新小岩",
+    "CO稲毛海岸",
+    "CO船橋前原",
+    "CO船橋三咲",
+    "GH心の花御成",
+    "GH心の花",
+    "GH松戸常盤平",
+    "GH市原五井西",
+    "GH市原国分寺台",
+    "GH市原能満",
+    "GH四街道物井",
+    "チャーム水元公園",
+    "CO松戸六実",
+    "GH佐倉上座",
+    "GH八千代大和田新田",
+    "GH印西木下",
+    "GH西尾久",
+    "GH柏の葉"
+  ];
+
+  // ===== util =====
   const pad = n => String(n).padStart(2,"0");
   const fmtTime = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   const fmtDate = d => `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;
   const weekdays = ["日","月","火","水","木","金","土"];
   const el = id => document.getElementById(id);
 
-  // --- state ---
+  // ===== state =====
   let startAt = null;
   let endAt = null;
-  let facilities = [];
   let stops = [];
   const MAX_STOPS = 5;
 
-  // --- DOM ---
+  // ===== DOM =====
   const todayEl = el("today");
   const whoEl = el("who");
   const storeDispEl = el("storeDisp");
   const statusEl = el("status");
-  const facilityLoadStatusEl = el("facilityLoadStatus");
-  const facilityDebugEl = el("facilityDebug");
-
   const startTimeEl = el("startTime");
   const endTimeEl = el("endTime");
   const durationEl = el("duration");
-
   const btnStart = el("btnStart");
   const btnEnd = el("btnEnd");
   const btnSave = el("btnSave");
   const resultEl = el("result");
-
   const stopsEl = el("stops");
   const btnAddStop = el("btnAddStop");
   const btnClearStops = el("btnClearStops");
   const stopCountPill = el("stopCountPill");
-
   const facilityListEl = el("facilityList");
   const memoEl = el("memo");
-
   const storeEl = el("store");
   const staffNameEl = el("staffName");
   const endpointEl = el("endpoint");
   const btnSaveSettings = el("btnSaveSettings");
-  const debugToggleEl = el("debugToggle");
 
-  // init date
-  const now = new Date();
-  todayEl.textContent = `${fmtDate(now)} (${weekdays[now.getDay()]})`;
-
-  // settings store
+  // ===== settings =====
   function getSettings() {
     return JSON.parse(localStorage.getItem("urgentDeliverySettings") || "{}");
   }
   function setSettings(s) {
     localStorage.setItem("urgentDeliverySettings", JSON.stringify(s));
   }
-
   function normalizeEndpoint(url) {
-    // ? 以降を落として /exec までにする（callback付きを保存されても正常化）
     const trimmed = (url || "").trim();
     if (!trimmed) return "";
-    const base = trimmed.split("?")[0];
-    return base;
+    return trimmed.split("?")[0]; // ?以降は落とす
   }
-
   function updateHeader() {
     const s = getSettings();
     whoEl.textContent = s.staffName ? s.staffName : "（未設定）";
@@ -234,7 +273,7 @@
 
   function canSave() {
     const s = getSettings();
-    if (!s.staffName || !s.endpoint || !s.store) return false;
+    if (!s.store || !s.staffName || !s.endpoint) return false;
     if (!(startAt && endAt)) return false;
     return stops.some(st => (st.facility || "").trim() !== "");
   }
@@ -244,6 +283,17 @@
     return (str||"").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
   }
 
+  // ===== facility datalist (embedded) =====
+  function buildFacilityDatalist() {
+    facilityListEl.innerHTML = "";
+    FACILITIES.forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      facilityListEl.appendChild(opt);
+    });
+  }
+
+  // ===== stops =====
   function updateStopCount() {
     stopCountPill.textContent = `${stops.length}/${MAX_STOPS}`;
     btnAddStop.disabled = stops.length >= MAX_STOPS;
@@ -287,9 +337,7 @@
       btn.addEventListener("click", () => {
         const i = Number(btn.getAttribute("data-remove"));
         stops.splice(i, 1);
-        renderStops();
-        updateStopCount();
-        updateSaveButton();
+        renderStops(); updateStopCount(); updateSaveButton();
       });
     });
 
@@ -310,62 +358,13 @@
     stops.push({ facility:"", cases:1, on_site_set:"" });
     renderStops(); updateStopCount(); updateSaveButton();
   }
+
   function clearStops() {
     stops = [];
     renderStops(); updateStopCount(); updateSaveButton();
   }
 
-  function buildFacilityDatalist() {
-    facilityListEl.innerHTML = "";
-    facilities.forEach(name => {
-      const opt = document.createElement("option");
-      opt.value = name;
-      facilityListEl.appendChild(opt);
-    });
-  }
-
-  // JSONP loader (CORS回避)
-  function loadFacilitiesFromGAS() {
-    const s = getSettings();
-    if (!s.endpoint) {
-      facilityLoadStatusEl.innerHTML = `<span class="ng">⚙で送信先URL（GAS）を設定してください</span>`;
-      return;
-    }
-
-    facilityLoadStatusEl.textContent = "施設マスタ読込中…";
-
-    const cbName = "cbFacilities_" + Math.random().toString(16).slice(2);
-    const url = s.endpoint + "?callback=" + encodeURIComponent(cbName) + "&_ts=" + Date.now();
-
-    facilityDebugEl.style.display = debugToggleEl.checked ? "block" : "none";
-    if (debugToggleEl.checked) facilityDebugEl.textContent = url;
-
-    window[cbName] = function(list) {
-      try {
-        facilities = Array.isArray(list) ? list : [];
-        buildFacilityDatalist();
-        facilityLoadStatusEl.innerHTML = facilities.length
-          ? `<span class="ok">施設マスタ読み込み：${facilities.length}件</span>`
-          : `<span class="ng">facility_masterが空です（シート名/内容を確認）</span>`;
-      } finally {
-        delete window[cbName];
-      }
-    };
-
-    const script = document.createElement("script");
-    script.src = url;
-    script.onerror = function() {
-      facilityLoadStatusEl.innerHTML = `<span class="ng">施設マスタ読込失敗</span>`;
-      if (debugToggleEl.checked) {
-        facilityDebugEl.style.display = "block";
-        facilityDebugEl.textContent = url;
-      }
-      delete window[cbName];
-    };
-    document.body.appendChild(script);
-  }
-
-  // buttons
+  // ===== actions =====
   btnStart.addEventListener("click", () => {
     startAt = new Date();
     endAt = null;
@@ -422,10 +421,12 @@
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(payload)
       });
+
       const txt = await res.text();
       if (!res.ok) throw new Error(txt || "送信に失敗");
 
       resultEl.innerHTML = `<span class="ok">送信完了</span>`;
+
       // reset
       startAt = null; endAt = null;
       memoEl.value = "";
@@ -444,30 +445,28 @@
 
   btnSaveSettings.addEventListener("click", () => {
     const staff = staffNameEl.value.trim();
-    const endpointRaw = endpointEl.value.trim();
-    const endpoint = normalizeEndpoint(endpointRaw);
+    const endpoint = normalizeEndpoint(endpointEl.value);
     const store = storeEl.value;
 
     if (!store) { alert("店舗を選んでください"); return; }
     if (!staff) { alert("スタッフ名は必須です"); return; }
-    if (!endpoint) { alert("送信先URL（GAS）は必須です"); return; }
+    if (!endpoint) { alert("送信先URL（GAS /exec）は必須です"); return; }
 
     setSettings({ store, staffName: staff, endpoint });
-    endpointEl.value = endpoint; // 整形結果を画面にも反映
+    endpointEl.value = endpoint;
 
     updateHeader();
     closeSettings();
-    loadFacilitiesFromGAS();
     updateSaveButton();
   });
 
-  debugToggleEl.addEventListener("change", () => {
-    facilityDebugEl.style.display = debugToggleEl.checked ? "block" : "none";
-    if (!debugToggleEl.checked) facilityDebugEl.textContent = "";
-  });
-
-  // boot
+  // ===== boot =====
   (function boot(){
+    const now = new Date();
+    todayEl.textContent = `${fmtDate(now)} (${weekdays[now.getDay()]})`;
+
+    buildFacilityDatalist();
+
     const s = getSettings();
     if (s.store) storeEl.value = s.store;
     if (s.staffName) staffNameEl.value = s.staffName;
@@ -475,15 +474,8 @@
 
     updateHeader();
     updateTimes();
-    renderStops();
-    updateStopCount();
-
-    // 初期は1件出す
     addStop();
-
-    // 施設読込（設定済みなら）
-    if (s.endpoint) loadFacilitiesFromGAS();
-
+    updateStopCount();
     updateSaveButton();
   })();
 </script>
